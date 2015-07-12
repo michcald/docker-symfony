@@ -1,11 +1,10 @@
-application:
-    image: symfony/code
+app:
+    image: michcald/app
     volumes:
-        - symfony:/var/www/symfony
-        - logs/symfony:/var/www/symfony/app/logs
+        - volumes/app/src/:/var/www/symfony
     tty: true
 db:
-    image: mysql
+    image: michcald/mysql
     ports:
         - 3306:3306
     environment:
@@ -14,35 +13,48 @@ db:
         MYSQL_USER: root
         MYSQL_PASSWORD: root
 php:
-    image: symfony/php-fpm
+    image: michcald/php-fpm
     expose:
         - 9000:9000
     volumes_from:
-        - application
+        - app
     links:
         - db
+#        - redis
+#        - beanstalkd
 nginx:
-    image: symfony/nginx
+    image: michcald/nginx
     ports:
         - 80:80
     links:
         - php
     volumes_from:
-        - application
+        - app
     volumes:
-        - logs/nginx/:/var/log/nginx
+        - volumes/nginx/var/logs/nginx/:/var/log/nginx
 redis:
-    image: redis
+    image: michcald/redis
     ports:
         - 6379:6379
+    volumes:
+        - logs/redis/:/var/log/redis
+beanstalkd:
+    image: michcald/beanstalkd
+    ports:
+        - 11300:11300
+    volumes:
+        - logs/beanstalkd:/var/log/beanstalkd
 elk:
     image: willdurand/elk
     ports:
         - 81:80
     volumes:
-        - elk/logstash:/etc/logstash
-        - elk/logstash/patterns:/opt/logstash/patterns
+        - images/elk/logstash:/etc/logstash
+        - images/elk/logstash/patterns:/opt/logstash/patterns
     volumes_from:
-        - application
+        - app
         - php
         - nginx
+#        - beanstalkd # CHANGE CONFIG
+#        - redis # CHANGE CONFIG
+#        - db # CHANGE CONFIG
