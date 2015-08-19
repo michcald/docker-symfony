@@ -1,60 +1,66 @@
-app:
-    image: michcald/app
-    volumes:
-        - volumes/app/src/:/var/www/symfony
+mysql:
+    build: images/mysql
+    hostname: mysql_host
     tty: true
-db:
-    image: michcald/mysql
-    ports:
-        - 3306:3306
+    restart: always
+    expose:
+        - "3306:3306"
     environment:
         MYSQL_ROOT_PASSWORD: root
         MYSQL_DATABASE: symfony
-        MYSQL_USER: root
-        MYSQL_PASSWORD: root
-php:
-    image: michcald/php-fpm
+redis:
+    build: images/redis
+    hostname: redis_host
+    tty: true
+    restart: always
     expose:
-        - 9000:9000
+        - "6379:6379"
+    volumes:
+        - "./volumes/redis/:/var/log/redis"
+beanstalkd:
+    build: images/beanstalkd
+    hostname: beanstalkd_host
+    expose:
+        - "11300:11300"
+    volumes:
+        - "./volumes/beanstalkd:/var/log/beanstalkd"
+app:
+    build: images/app
+    tty: true
+    restart: always
+    volumes:
+        - "./volumes/app/src/:/var/www/myapp"
+php:
+    build: images/php-fpm
+    hostname: php_host
+    expose:
+        - "9000:9000"
     volumes_from:
         - app
     links:
-        - db
-#        - redis
-#        - beanstalkd
+        - mysql
+        - redis
+        - beanstalkd
 nginx:
-    image: michcald/nginx
+    build: images/nginx
+    hostname: nginx_host
     ports:
-        - 80:80
+        - "8080:80"
     links:
         - php
     volumes_from:
         - app
     volumes:
-        - volumes/nginx/var/logs/nginx/:/var/log/nginx
-redis:
-    image: michcald/redis
-    ports:
-        - 6379:6379
-    volumes:
-        - logs/redis/:/var/log/redis
-beanstalkd:
-    image: michcald/beanstalkd
-    ports:
-        - 11300:11300
-    volumes:
-        - logs/beanstalkd:/var/log/beanstalkd
+        - "./volumes/nginx:/var/log/nginx"
 elk:
     image: willdurand/elk
+    hostname: elk_host
     ports:
-        - 81:80
+        - "8081:80"
     volumes:
-        - images/elk/logstash:/etc/logstash
-        - images/elk/logstash/patterns:/opt/logstash/patterns
+        - "./volumes/elk/logstash:/etc/logstash"
+        - "./volumes/elk/logstash/patterns:/opt/logstash/patterns"
     volumes_from:
         - app
         - php
         - nginx
-#        - beanstalkd # CHANGE CONFIG
-#        - redis # CHANGE CONFIG
-#        - db # CHANGE CONFIG
